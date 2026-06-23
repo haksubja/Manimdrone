@@ -131,7 +131,7 @@ class SolarDroneDemo(Scene):
         for i in range(n_panels):
             t = (i + 0.5) / n_panels
             center = interpolate(roof_a, roof_b, t) + rotate_vector(UP, angle) * 0.32
-            panel = make_panel(width=1.05, height=0.55, angle=angle, fill=PANEL_DIRTY)
+            panel = make_panel(width=1.05, height=0.55, angle=angle, fill=PANEL_CLEAN)
             panel.move_to(center)
             panels.add(panel)
             d = dust_cluster(n=random.randint(4, 6))
@@ -153,8 +153,33 @@ class SolarDroneDemo(Scene):
         )
         eff_group = VGroup(eff_label, eff_value)
         self.play(
-            [FadeIn(d) for d in dusts], 
-            FadeIn(eff_label), FadeIn(eff_value), run_time=2)
+            FadeIn(eff_label),
+            FadeIn(eff_value),
+            run_time=1
+        )
+
+        # Gradually dirty the panels as efficiency decreases
+        for i in range(n_panels):
+            dirty_panel = make_panel(
+                width=1.05,
+                height=0.55,
+                angle=angle,
+                fill=interpolate_color(
+                    ManimColor(PANEL_CLEAN),
+                    ManimColor(PANEL_DIRTY),
+                    (i + 1) / n_panels
+                )
+            )
+            dirty_panel.move_to(panels[i].get_center())
+
+            self.play(
+                Transform(panels[i], dirty_panel),
+                FadeIn(dusts[i]),
+                eff_tracker.animate.set_value(
+                    100 - (24 * (i + 1) / n_panels)
+                ),
+                run_time=0.35,
+            )
 
         def set_eff_color(c):
             eff_color_tracker["color"] = c
