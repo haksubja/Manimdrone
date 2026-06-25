@@ -220,7 +220,7 @@ class SolarDroneDemo(Scene):
                 Transform(panels[i], dirty_panel),
                 FadeIn(dusts[i]),
                 eff_tracker.animate.set_value(
-                    100 - (24 * (i + 1) / n_panels)
+                    100 - (40 * (i + 1) / n_panels)
                 ),
                 run_time=0.35,
             )
@@ -260,7 +260,7 @@ class SolarDroneDemo(Scene):
         intro_label = Text("Um drone para a limpeza de painéis", font="Arial", color=ACCENT).scale(0.55)
         intro_label.next_to(solution_head, DOWN*10, buff=0.4)
         self.play(FadeIn(intro_label), run_time=0.6)
-        self.wait(5)
+        self.wait(3)
 
         self.play(drone.animate.move_to([-3.0, 3, 0]), run_time=1.3, rate_func=smooth)
         self.play(FadeOut(intro_label), run_time=0.5)
@@ -394,6 +394,6 @@ class SolarDroneDemo(Scene):
         final_tag = Text("Painéis limpos. Sem esforço. Em qualquer altura.", font="Arial", color=ACCENT).scale(0.6)
         final_tag.to_edge(DOWN, buff=1.0)
         self.play(FadeIn(final_tag, shift=UP * 0.2), run_time=2)
-        self.wait(5)
+        self.wait(3)
 
         self.play(FadeOut(VGroup(closing_title, rows, final_tag)), run_time=2.0)
