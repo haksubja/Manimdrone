@@ -47,6 +47,30 @@ def make_panel(width=1.0, height=0.55, angle=0, fill=PANEL_DIRTY):
     return grp
 
 
+def make_rotor(width=0.46, height=0.30, spin=0.0):
+    """A rotor seen at a slight angle: ring housing + blurred spinning blades + hub + a glint."""
+    # disc seen "through" the ring, like looking down into the rotor
+    disc = Ellipse(width=width * 0.96, height=height * 0.96,
+                    fill_color="#222B3D", fill_opacity=0.55, stroke_width=0)
+
+    # motion-blurred blades, drawn as two crossed slivers so it reads as spinning
+    blade_main = Ellipse(width=width * 0.88, height=height * 0.22,
+                          fill_color="#C7CEDC", fill_opacity=0.55, stroke_width=0)
+    blade_cross = Ellipse(width=width * 0.22, height=height * 0.88,
+                           fill_color="#C7CEDC", fill_opacity=0.4, stroke_width=0)
+    blades = VGroup(blade_main, blade_cross).rotate(spin)
+
+    # outer ring / shroud
+    ring = Ellipse(width=width, height=height,
+                    fill_opacity=0, stroke_color="#9AA5B8", stroke_width=2.5)
+
+    # central motor hub
+    hub = Circle(radius=min(width, height) * 0.1, fill_color="#3A4255",
+                 fill_opacity=1, stroke_width=0)
+
+    return VGroup(disc, blades, ring, hub)
+
+
 def make_drone(scale=0.42):
     body = RoundedRectangle(corner_radius=0.08, width=0.9, height=0.32,
                              fill_color="#D8DEE9", fill_opacity=1, stroke_color="#3A4255", stroke_width=2)
@@ -57,15 +81,20 @@ def make_drone(scale=0.42):
         Line([0.45, 0.18 * s, 0], [0.85, 0.4 * s, 0], stroke_color="#3A4255", stroke_width=4)
         for s in (1, -1)
     ])
+    rotor_positions = [(-0.85, 1), (-0.85, -1), (0.85, 1), (0.85, -1)]
     rotors = VGroup(*[
-        Ellipse(width=0.5, height=0.07, fill_color="#9AA5B8", fill_opacity=0.85, stroke_width=0)
-        .move_to([x, 0.4 * s, 0])
-        for x, s in [(-0.85, 1), (-0.85, -1), (0.85, 1), (0.85, -1)]
+        make_rotor(spin=random.uniform(-0.25, 0.25)).move_to([x, 0.4 * s, 0])
+        for x, s in rotor_positions
+    ])
+    # small motor mounts where each arm meets its rotor
+    motor_mounts = VGroup(*[
+        Circle(radius=0.045, fill_color="#3A4255", fill_opacity=1, stroke_width=0).move_to([x, 0.4 * s, 0])
+        for x, s in rotor_positions
     ])
     boom = Line([0, -0.16, 0], [0, -0.55, 0], stroke_color="#3A4255", stroke_width=3)
     brush = RoundedRectangle(corner_radius=0.03, width=0.55, height=0.12,
                               fill_color="#4FB0E0", fill_opacity=1, stroke_width=0).move_to([0, -0.62, 0])
-    drone = VGroup(arms, rotors, body, boom, brush)
+    drone = VGroup(arms, rotors, motor_mounts, body, boom, brush)
     drone.scale(scale)
     return drone
 
@@ -199,10 +228,10 @@ class SolarDroneDemo(Scene):
         def set_eff_color(c):
             eff_color_tracker["color"] = c
 
-        self.play(eff_tracker.animate.set_value(76), run_time=1.6)
+        self.play(eff_tracker.animate.set_value(60), run_time=1.6)
         set_eff_color(WARN)
 
-        warn_text = Text("Poeira e resíduos podem reduzir a eficiência em até 25%", font="Arial", color=WARN).scale(0.5)
+        warn_text = Text("Poeira e resíduos podem reduzir a eficiência em até 40%", font="Arial", color=WARN).scale(0.5)
         warn_bg = RoundedRectangle(
             corner_radius=0.1,
             width=warn_text.width + 0.4,
