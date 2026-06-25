@@ -70,6 +70,21 @@ def make_drone(scale=0.42):
     return drone
 
 
+def make_cleaner_robot(scale=0.35):
+    body = RoundedRectangle(corner_radius=0.04, width=0.42, height=0.26,
+                             fill_color="#DCE3EE", fill_opacity=1, stroke_color="#3A4255", stroke_width=2)
+    eye = Dot(radius=0.035, color=ACCENT).move_to(body.get_top() + DOWN * 0.08)
+    wheels = VGroup(*[
+        Circle(radius=0.07, fill_color="#3A4255", fill_opacity=1, stroke_width=0).move_to([x, -0.13, 0])
+        for x in (-0.13, 0.13)
+    ])
+    brush = RoundedRectangle(corner_radius=0.02, width=0.46, height=0.06,
+                              fill_color=PANEL_SHINE, fill_opacity=1, stroke_width=0).move_to([0, -0.16, 0])
+    bot = VGroup(wheels, body, brush, eye)
+    bot.scale(scale)
+    return bot
+
+
 def dust_cluster(n=4, spread=(0.35, 0.15)):
     pts = VGroup()
     for _ in range(n):
@@ -85,7 +100,7 @@ class SolarDroneDemo(Scene):
         position = Pos()
 
         # Title
-        title = Text("SolarBee", font="Arial", weight=BOLD, color=WHITE_T).scale(1.3)
+        title = Text("HeliosBee", font="Arial", weight=BOLD, color=WHITE_T).scale(1.3)
         tagline = Text("Drone limpador de placas solares", font="Arial", color=GREY).scale(0.55)
         tagline.next_to(title, DOWN, buff=0.35)
         underline = Line(LEFT, RIGHT, color=ACCENT, stroke_width=3).set_width(title.width).next_to(title, DOWN, buff=0.15)
@@ -234,14 +249,32 @@ class SolarDroneDemo(Scene):
         progress_label.next_to(progress_group, UP, buff=0.15)
         self.play(FadeIn(progress_group), FadeIn(progress_label), run_time=0.5)
 
+        # Cleaner robot that the drone carries from panel to panel
+        cleaner = make_cleaner_robot(scale=1.0)
+        cleaner.move_to(drone.get_center() + DOWN * 0.55)
+        self.play(FadeIn(cleaner, scale=0.8), run_time=0.4)
+
         for i in range(n_panels):
-            hover_point = panels[i].get_center() + rotate_vector(UP, angle) * 0.55
-            self.play(drone.animate.move_to(hover_point), run_time=0.7, rate_func=smooth)
+            panel_dir = rotate_vector(RIGHT, angle)
+            panel_normal = rotate_vector(UP, angle)
+            panel_center = panels[i].get_center()
+            half_w = 0.4
+            start_point = panel_center - panel_dir * half_w + panel_normal * 0.08
+            end_point = panel_center + panel_dir * half_w + panel_normal * 0.08
+            hover_point = panel_center + panel_normal * 0.6
+
+            # Drone flies in, carrying the cleaner robot underneath it
+            self.play(
+                drone.animate.move_to(hover_point),
+                cleaner.animate.move_to(hover_point + DOWN * 0.55),
+                run_time=0.7, rate_func=smooth,
+            )
+
+            # Drone lowers the robot onto the start edge of the panel
+            self.play(cleaner.animate.move_to(start_point), run_time=0.45)
 
             new_panel = make_panel(width=1.05, height=0.55, angle=angle, fill=PANEL_CLEAN)
-            new_panel.move_to(panels[i].get_center())
-            shine = Ellipse(width=1.05, height=0.18, color=PANEL_SHINE, fill_opacity=0.55, stroke_width=0)
-            shine.rotate(angle).move_to(panels[i].get_center())
+            new_panel.move_to(panel_center)
 
             new_width = 4.2 * (i + 1) / n_panels
             new_fill = RoundedRectangle(corner_radius=0.08, width=max(new_width, 0.05), height=0.32,
@@ -251,17 +284,33 @@ class SolarDroneDemo(Scene):
             new_label = Text(f"Limpando {i + 1} / {n_panels} painés", font="Arial", color=GREY).scale(0.42)
             new_label.next_to(progress_group, UP, buff=0.15)
 
+            trail = Ellipse(width=0.18, height=0.12, color=PANEL_SHINE, fill_opacity=0.6, stroke_width=0)
+            trail.rotate(angle).move_to(start_point)
+
+            # Robot walks across the panel, scrubbing the dust away as it goes
             self.play(
-                FadeOut(dusts[i], shift=DOWN * 0.4, scale=0.5),
+                cleaner.animate.move_to(end_point),
+                trail.animate.move_to(end_point),
+                FadeOut(dusts[i], shift=panel_dir * 0.3, scale=0.5),
                 Transform(panels[i], new_panel),
-                FadeIn(shine, scale=1.2),
                 Transform(progress_fill, new_fill),
                 Transform(progress_label, new_label),
-                run_time=0.8,
+                run_time=0.9,
             )
-            self.play(FadeOut(shine), run_time=0.35)
+            self.play(FadeOut(trail), run_time=0.25)
 
-        self.play(drone.animate.move_to(sun.get_center() + DOWN * 2), run_time=0.8)
+            # Drone scoops the robot back up before heading to the next panel
+            self.play(
+                cleaner.animate.move_to(drone.get_center() + DOWN * 0.55),
+                run_time=0.45,
+            )
+
+        self.play(
+            drone.animate.move_to(sun.get_center() + DOWN * 2),
+            cleaner.animate.move_to(sun.get_center() + DOWN * 2.55),
+            run_time=0.8,
+        )
+        self.play(FadeOut(cleaner), run_time=0.3)
         self.play(FadeOut(progress_group), FadeOut(progress_label), run_time=0.5)
         self.play(FadeOut(solution_head), run_time=0.4)
 
@@ -291,7 +340,7 @@ class SolarDroneDemo(Scene):
         self.play(FadeOut(VGroup(ground, wall_left, wall_right, roof_under, roof_line, sun, panels)), run_time=0.7)
 
         # Ending
-        closing_title = Text("SolarBee", font="Arial", weight=BOLD, color=WHITE_T).scale(1.0)
+        closing_title = Text("HeliosBee", font="Arial", weight=BOLD, color=WHITE_T).scale(1.0)
         closing_title.to_edge(UP, buff=1.0)
 
         bullets = VGroup(*[
